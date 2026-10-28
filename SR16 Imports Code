@@ -1,0 +1,66 @@
+
+# Parameters (millions of dollars)
+arima_increase <- 1357
+historical_increase <- 1148
+damp_start_year <- 2030
+
+# Test three decay parameters
+decay_values <- c(1, 5, 10)
+
+# Calculate annual increases
+sensitivity <- expand_grid(
+  Year = 2026:2060,
+  R = decay_values
+) %>%
+  mutate(
+    Years_Since_Damp = pmax(0, Year - damp_start_year),
+    
+    Annual_Increase =
+      historical_increase +
+      (arima_increase - historical_increase) *
+      exp(-Years_Since_Damp / R),
+    
+    Scenario = paste0("R = ", R)
+  )
+
+# Plot sensitivity scenarios
+ggplot(
+  sensitivity,
+  aes(
+    x = Year,
+    y = Annual_Increase,
+    color = Scenario
+  )
+) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(
+    yintercept = historical_increase,
+    linetype = "dashed",
+    color = "gray50"
+  ) +
+  labs(
+    title = "Sensitivity of Dampened ARIMA Annual Increase",
+    subtitle = "Comparison of decay parameters: R = 1, 5, and 10",
+    x = "Year",
+    y = "Annual Increase in Imports ($ Millions)",
+    color = "Decay Parameter"
+  ) +
+  theme_minimal(base_size = 12)
+
+# Export annual values in wide format
+sensitivity_csv <- sensitivity %>%
+  select(Year, Scenario, Annual_Increase) %>%
+  pivot_wider(
+    names_from = Scenario,
+    values_from = Annual_Increase
+  ) %>%
+  arrange(Year)
+
+write_csv(
+  sensitivity_csv,
+  "Dampened_ARIMA_Decay_Sensitivity.csv"
+)
+
+print(sensitivity_csv)
+
+
